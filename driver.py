@@ -4,8 +4,8 @@
 
 import os
 import sys
-
+import curses
 from ui import MainWindow
 
-app = MainWindow()
-app.show()
+if __name__ == '__main__':
+    curses.wrapper(MainWindow)
