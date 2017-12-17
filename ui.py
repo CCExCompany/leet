@@ -4,13 +4,14 @@
 
 import curses
 from crypto import CaesarCipher
+from curses import panel
+from file_browser import FileBrowser
 
 class Menu(object):
     def __init__(self, items, stdscreen):
         self.window = stdscreen.subwin(0,0)
         self.window.keypad(1)
-        self.panel = panel.ne
-        w_panel(self.window)
+        self.panel = panel.new_panel(self.window)
         self.panel.hide()
         panel.update_panels()
 
@@ -62,7 +63,7 @@ class Menu(object):
         curses.doupdate()
 
 class MainWindow(object):
-    def __init__(self):
+    def __init__(self, stdscreen):
         self.screen = stdscreen
         curses.curs_set(0)
 
@@ -78,5 +79,7 @@ class MainWindow(object):
             ('Decrypt file', curses.beep),
             ('Manage keys', submenu.display)
         ]
-        main_menu = Menu(main_menu_items, self.screen)
-        main_menu.display()
+        #main_menu = Menu(main_menu_items, self.screen)
+        #main_menu.display()
+        fb = FileBrowser(self.screen)
+        fb.display()
