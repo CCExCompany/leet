@@ -63,8 +63,9 @@ class Menu(object):
         curses.doupdate()
 
 class MainWindow(object):
-    def __init__(self, stdscreen):
+    def __init__(self, stdscreen, logger):
         self.screen = stdscreen
+        self.logger = logger
         curses.curs_set(0)
 
         submenu_items = [
@@ -75,11 +76,23 @@ class MainWindow(object):
         submenu = Menu(submenu_items, self.screen)
 
         main_menu_items = [
-            ('Encrypt file', curses.beep),
+            ('Encrypt file', self.encrypt_file_dlg),
             ('Decrypt file', curses.beep),
             ('Manage keys', submenu.display)
         ]
-        #main_menu = Menu(main_menu_items, self.screen)
-        #main_menu.display()
+        main_menu = Menu(main_menu_items, self.screen)
+        main_menu.display()
+    
+    def encrypt_file_dlg(self):
+        input_file = self.get_file()
+        self.logger.log('Encrypting '+input_file)
+    
+    def decrypt_file_dlg(self):
+        input_file = self.get_file()
+        self.logger.log('Decrypting '+input_file)
+        
+    def get_file(self):
         fb = FileBrowser(self.screen)
         fb.display()
+        self.logger.log('Result of file selection window: '+fb.result)
+        return fb.result
