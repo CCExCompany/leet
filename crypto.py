@@ -39,3 +39,11 @@ class CaesarCipher(SymmetricAlgorithm):
             
         M = [chr(ord(data[i])-self.key) for i in range(len(data))]
         return ''.join(M)
+
+def file_as_str(filename: str) -> str:
+    with open(filename, "r") as f:
+        return f.read()
+
+def save_to_file(filename: str, data: str):
+    with open(filename, "w") as f:
+        f.write(data)
