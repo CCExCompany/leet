@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+
+# Copyright by CCEx under GPLv3 license (c) 2017
+
 import curses
 import time
 import random
@@ -95,9 +99,10 @@ class Dir(File):
                 yield kid, depth + 1
 
 class FileBrowser:
-    def __init__(self, stdscreen):
+    def __init__(self, stdscreen, logger):
         self.window = stdscreen.subwin(0,0)
         self.window.keypad(1)
+        self.logger = logger
         cgitb.enable(format="text")
         self.ESC = 27
         self.result = ''
@@ -122,8 +127,13 @@ class FileBrowser:
                         getattr(data, pending_action)()
                         pending_action = None
                     elif pending_save:
-                        self.result = data.name
-                        return
+                        if os.path.isdir(data.name):
+                            pending_save = False
+                            if data.name != '.' or data.name != '..':
+                                getattr(data, 'expand')()
+                        else: # result is file, ok!
+                            self.result = data.name
+                            return
                 else:
                     self.window.attrset(curses.color_pair(0))
                 if 0 <= line - offset < curses.LINES - 1:
@@ -141,8 +151,9 @@ class FileBrowser:
                 pending_action = 'expand'
             elif ch == curses.KEY_LEFT: 
                 pending_action = 'collapse'
-            elif ch == self.ESC: 
+            elif ch == self.ESC:
+                os.system("clear") 
                 return
-            elif ch == ord('\n'): 
+            elif ch == ord('\n'):
                 pending_save = True
             curidx %= line

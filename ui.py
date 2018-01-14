@@ -3,6 +3,8 @@
 # Copyright by CCEx under GPLv3 license (c) 2017
 
 import curses
+import os
+import json
 from crypto import CaesarCipher
 from curses import panel
 from curses.textpad import Textbox, rectangle
@@ -10,13 +12,28 @@ from file_browser import FileBrowser
 from crypto import file_as_str, save_to_file
 from functools import partial
 
+class WarningWindow:
+    def __init__(self, msg):
+        self.msg = msg
+        
+    def display(self):
+        box = curses.newwin(8, 55, 0, 0)
+        box.addstr(1,1, self.msg)
+        box.addstr(3,1, "Press any key to continue")
+        box.border()
+        curses.doupdate()
+        
+        # Get a key and clear it
+        box.getch()
+        box.erase()
+        os.system("clear")
+
 class StringInput:
     def __init__(self, msg):
         self.msg = msg
         
     def get_line(self) -> str:
         curses.curs_set(1)
-        #curses.idlok(1)
         
         inp = curses.newwin(8, 55, 0,0)
         inp.addstr(1,1, self.msg)
@@ -31,6 +48,7 @@ class StringInput:
         
         text = tb.gather()
         curses.curs_set(0)
+        curses.doupdate()
         return text.strip()[:-1].strip()
         
 class Menu(object):
@@ -92,19 +110,15 @@ class MainWindow(object):
     def __init__(self, stdscreen, logger):
         self.screen = stdscreen
         self.logger = logger
-        self.keys = []
+        self.keys = self._readkeys()
         self.selected_key = -1
         
         curses.curs_set(0)
 
-        #si = StringInput()
-        #logger.log("Line: "+si.get_line())
-        #return
-        
         submenu_items = [
             ('Create new key', self.add_key),
             ('List keys', self.list_keys),
-            ('Remove existing key', curses.beep)
+            ('Remove existing key', self.delete_key)
         ]
         submenu = Menu(submenu_items, self.screen)
 
@@ -116,8 +130,21 @@ class MainWindow(object):
         main_menu = Menu(main_menu_items, self.screen)
         main_menu.display()
     
+    def _readkeys(self):
+        if not os.path.isfile('.keys.json'):
+            return [] # no keys saved
+        with open('.keys.json', 'r') as f:
+            return list(json.loads(f.read()))
+    
     def encrypt_file_dlg(self):
         input_file = self.get_file()
+        if input_file in ['', ' ', '.', '..']:
+            return
+        if len(self.keys) == 0:
+            warn = WarningWindow("You must add at least one key first!")
+            warn.display()
+            return
+            
         self.logger.log('Encrypting '+input_file)
         cs = CaesarCipher(self.keys[self.selected_key])
         M = file_as_str(input_file)
@@ -130,6 +157,13 @@ class MainWindow(object):
     
     def decrypt_file_dlg(self):
         input_file = self.get_file()
+        if input_file in ['', ' ', '.', '..']:
+            return
+        if len(self.keys) == 0:
+            warn = WarningWindow("You must add at least one key first!")
+            warn.display()
+            return
+            
         self.logger.log('Decrypting '+input_file)
         cs = CaesarCipher(self.keys[self.selected_key])
         C = file_as_str(input_file)
@@ -141,7 +175,7 @@ class MainWindow(object):
         self.logger.log('Saved plain text to ' + ofname)
         
     def get_file(self):
-        fb = FileBrowser(self.screen)
+        fb = FileBrowser(self.screen, self.logger)
         fb.display()
         self.logger.log('Result of file selection window: '+fb.result)
         return fb.result
@@ -158,13 +192,29 @@ class MainWindow(object):
         
         self.keys.append(key)
         self.selected_key = len(self.keys) - 1
+        
+        with open('.keys.json', 'w') as f: # save key
+            f.write(json.dumps(self.keys))
     
     def set_key(self, i):
         self.selected_key = i
-        for ch in "Done":
-            self.screen.echochar(ch)
+        warn = WarningWindow("Key selected")
+        warn.display()
         
     def list_keys(self):
         key_list = [(key, partial(self.set_key, i)) for i, key in enumerate(self.keys)]
         m = Menu(key_list, self.screen)
         m.display()
+    
+    def _del_key(self, key):
+        if key in self.keys:
+            self.keys.remove(key)
+            warn = WarningWindow("Key removed!")
+            warn.display()
+            
+    def delete_key(self):
+        m = key_list = [(key, partial(self._del_key, key)) for key in self.keys]
+        m = Menu(key_list, self.screen)
+        m.display()
+        with open('.keys.json', 'w') as f: # save changes
+            f.write(json.dumps(self.keys))
