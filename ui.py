@@ -5,7 +5,7 @@
 import curses
 import os
 import json
-from crypto import CaesarCipher
+from crypto import AESCipher
 from curses import panel
 from curses.textpad import Textbox, rectangle
 from file_browser import FileBrowser
@@ -146,7 +146,7 @@ class MainWindow(object):
             return
             
         self.logger.log('Encrypting '+input_file)
-        cs = CaesarCipher(self.keys[self.selected_key])
+        cs = AESCipher(self.keys[self.selected_key])
         M = file_as_str(input_file)
         C = cs.encrypt(M)
         self.logger.log('Plain text: '+M)
@@ -165,7 +165,7 @@ class MainWindow(object):
             return
             
         self.logger.log('Decrypting '+input_file)
-        cs = CaesarCipher(self.keys[self.selected_key])
+        cs = AESCipher(self.keys[self.selected_key])
         C = file_as_str(input_file)
         M = cs.decrypt(C)
         self.logger.log('Ciphertext: '+C)
@@ -181,14 +181,7 @@ class MainWindow(object):
         return fb.result
     
     def add_key(self):
-        key = StringInput("Enter the key as a single integer (1 <= key <= 32):").get_line()
-        while True:
-            try:
-                key = int(key)
-                if key < 1 or key > 32: raise ValueError
-                break
-            except ValueError:
-                key = StringInput("Key is not valid. Try again:").get_line()
+        key = StringInput("Enter the key as a single line and press ENTER:").get_line()
         
         self.keys.append(key)
         self.selected_key = len(self.keys) - 1
