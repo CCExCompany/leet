@@ -12,7 +12,7 @@ class LeetLogger:
     def __init__(self):
         self.logger = logging.getLogger('leet')
         self.logger.setLevel(logging.DEBUG)
-        fh = logging.FileHandler('/tmp/leet.log')
+        fh = logging.FileHandler('.leet.log')
         fh.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)

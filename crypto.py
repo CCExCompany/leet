@@ -37,14 +37,14 @@ class CaesarCipher(SymmetricAlgorithm):
         if self.key == None or not isinstance(self.key, int):
             raise ValueError("Invalid key")
             
-        C = [chr(ord(data[i])+self.key) for i in range(len(data))]
+        C = [chr(ord(data[i]) + self.key) for i in range(len(data))]
         return ''.join(C)
     
     def decrypt(self, data: str) -> str:
         if self.key == None or not isinstance(self.key, int):
             raise ValueError("Invalid key")
             
-        M = [chr(ord(data[i])-self.key) for i in range(len(data))]
+        M = [chr(ord(data[i]) - self.key) for i in range(len(data))]
         return ''.join(M)
 
 ''' This class implements AES encryption using PyCrypto '''
@@ -60,7 +60,7 @@ class AESCipher(SymmetricAlgorithm):
         return s + (self.bs - len(s) % self.bs) * chr(self.bs - len(s) % self.bs)
 
     def unpad(self, s):
-        return s[:-ord(s[len(s)-1:])]
+        return s[:-ord(s[len(s) - 1:])]
     
     def encrypt(self, data: str):
         data = self.pad(data)
