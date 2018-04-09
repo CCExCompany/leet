@@ -1,0 +1,2 @@
+pycrypto >= 2.6
+psutil >= 5.4.3
