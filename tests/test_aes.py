@@ -9,8 +9,9 @@ class Test(unittest.TestCase):
 
         message = ''.join(random.choice(string.ascii_uppercase + string.digits + 
 string.ascii_lowercase) for _ in range(100))
-        key = random.randint(0,32)
-
+        key = ''.join(random.choice(string.ascii_uppercase + string.digits + 
+string.ascii_lowercase) for _ in range(32))
+        
         # check cipher without key
         try:
             C = cipher.encrypt(message)

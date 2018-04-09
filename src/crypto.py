@@ -52,7 +52,7 @@ class CaesarCipher(SymmetricAlgorithm):
 class AESCipher(SymmetricAlgorithm):
     # Sets the key and block size
     def __init__(self, key):
-        self.key = hashlib.sha256(key.encode()).digest()
+        self._key = hashlib.sha256(key.encode()).digest() if isinstance(key, str) else None
         self.bs = 32
     
     # Pad data up to block size
@@ -63,6 +63,9 @@ class AESCipher(SymmetricAlgorithm):
         return s[:-ord(s[len(s) - 1:])]
     
     def encrypt(self, data: str):
+        if not isinstance(self.key, str):
+            raise ValueError('Invalid key')
+
         data = self.pad(data)
         iv = Random.new().read(AES.block_size)
         aes = AES.new(self.key, AES.MODE_CBC, iv)
@@ -71,6 +74,9 @@ class AESCipher(SymmetricAlgorithm):
         return base64.b64encode(C).decode('utf-8')
     
     def decrypt(self, data: str) -> str:
+        if not isinstance(self.key, str):
+            raise ValueError('Invalid key')
+        
         data = base64.b64decode(data)
         iv = data[:AES.block_size]
         aes = AES.new(self.key, AES.MODE_CBC, iv)
