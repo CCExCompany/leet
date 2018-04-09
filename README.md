@@ -5,3 +5,6 @@ The goal of leet however is to be simpler and as user friendly as possible, maki
 For a more complete description of the leet project, it has been decided to link the Sourceforge pages describing the software application as well as the encryption algorithm to be used.
 
 Here: https://sourceforge.net/p/home-of-leet/wiki/browse_pages/
+
+## Build instructions
+Use: python setup.py build

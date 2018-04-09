@@ -5,7 +5,14 @@
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+if getattr(sys, 'frozen', False):
+    # frozen
+    dir_ = os.path.dirname(sys.executable)
+else:
+    # unfrozen
+    dir_ = os.path.dirname(os.path.realpath(__file__))
+
+sys.path.append(os.path.join(dir_, "src"))
 
 import curses
 import logging

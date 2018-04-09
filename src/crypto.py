@@ -63,7 +63,7 @@ class AESCipher(SymmetricAlgorithm):
         return s[:-ord(s[len(s) - 1:])]
     
     def encrypt(self, data: str):
-        if not isinstance(self.key, str):
+        if not isinstance(self.key, str) and not isinstance(self.key, bytes):
             raise ValueError('Invalid key')
 
         data = self.pad(data)
@@ -74,7 +74,7 @@ class AESCipher(SymmetricAlgorithm):
         return base64.b64encode(C).decode('utf-8')
     
     def decrypt(self, data: str) -> str:
-        if not isinstance(self.key, str):
+        if not isinstance(self.key, str) and not isinstance(self.key, bytes):
             raise ValueError('Invalid key')
         
         data = base64.b64decode(data)
