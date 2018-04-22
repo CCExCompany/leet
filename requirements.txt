@@ -1,3 +1,4 @@
+picotui     >= 1.0
 cx_freeze   == 5.0.1
 pycrypto    >= 2.6
 psutil      >= 5.4.3

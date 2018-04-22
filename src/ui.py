@@ -11,45 +11,27 @@ from curses.textpad import Textbox, rectangle
 from file_browser import FileBrowser
 from crypto import file_as_str, save_to_file
 from functools import partial
+from picotui.context import Context
+from picotui.dialogs import *
+from picotui.widgets import *
 
-class WarningWindow:
-    def __init__(self, msg):
-        self.msg = msg
-        
+
+class Menu1(object):
+    def __init__(self, items):
+        assert len(items) > 0
+        self.items = items
+    
     def display(self):
-        box = curses.newwin(8, 55, 0, 0)
-        box.addstr(1,1, self.msg)
-        box.addstr(3,1, "Press any key to continue")
-        box.border()
-        curses.doupdate()
-        
-        # Get a key and clear it
-        box.getch()
-        box.erase()
-        os.system("clear")
-
-class StringInput:
-    def __init__(self, msg):
-        self.msg = msg
-        
-    def get_line(self) -> str:
-        curses.curs_set(1)
-        
-        inp = curses.newwin(8, 55, 0,0)
-        inp.addstr(1,1, self.msg)
-        sub = inp.subwin(3, 41, 2, 1)
-        sub.border()
-        
-        # no need to handle enter as window is 1 line of size
-        sub2 = sub.subwin(1, 40, 3, 2)
-        tb = curses.textpad.Textbox(sub2, insert_mode=True)
-        inp.refresh()
-        tb.edit()
-        
-        text = tb.gather()
-        curses.curs_set(0)
-        curses.doupdate()
-        return text.strip()[:-1].strip()
+        with Context():
+            n = len(self.items)
+            d = Dialog(5, n, 50, 12, title="Main menu")
+            for i in range(n):
+                b = WButton(30, self.items[i][0])
+                d.add(1, 10*(i+1), b)
+                b.on("click", self.items[i][1])
+            d.loop()
+                
+                
         
 class Menu(object):
     def __init__(self, items, stdscreen):
@@ -121,7 +103,7 @@ class MainWindow(object):
             ('Decrypt file', self.decrypt_file_dlg),
             ('Manage keys', self.manage_keys)
         ]
-        main_menu = Menu(main_menu_items, self.screen)
+        main_menu = Menu1(main_menu_items)
         main_menu.display()
     
     def manage_keys(self):
@@ -139,14 +121,15 @@ class MainWindow(object):
             
         self.keys = self._readkeys()
         if self.keys == None:
-            w = WarningWindow('Wrong password!')
-            w.display()
+            d = DConfirmation(['Wrong password!'], title='Error')
+            d.result()
         elif self.keys == [] and self.password == None:
-            pass1 = StringInput("Please set the password for keys protection").get_line()
-            pass2 = StringInput("Please confirm your password by typping it again").get_line()
+            with Context():
+                pass1 = DTextEntry(25, "", title="Please set the password for keys protection").result()
+                pass2 = DTextEntry(25, "", title="Please confirm your password by typping it again").result()
             if pass1 != pass2:
-                w = WarningWindow('Different passwords entered, please retry')
-                w.display()
+                d = DConfirmation(['Different passwords entered, please retry'], title='Error')
+                d.result()
             else:
                 self.password = pass1
                 submenu.display()
@@ -158,7 +141,8 @@ class MainWindow(object):
             return [] # no keys saved
         
         encrypted_keys = []
-        self.password = StringInput("Enter the password to unlock the keys").get_line()
+        with Context():
+            self.password = DTextEntry(25, "", title="Enter the password to unlock the keys").result()
         with open('.keys.json', 'r') as f:
             encrypted_keys = list(json.loads(f.read()))
         encrypted_keys, check = encrypted_keys[:-1], encrypted_keys[-1]
@@ -170,18 +154,20 @@ class MainWindow(object):
         keys = [c.decrypt(key) for key in encrypted_keys]
         return keys
         
-    def encrypt_file_dlg(self):
+    def encrypt_file_dlg(self, stub):
         if self.keys == None or len(self.keys) == 0 or self.selected_key == -1:
-            w = WarningWindow('Please select the key first')
-            w.display()
+            d = DConfirmation(['Please select the key first'], title='Error')
+            d.result()
+            
             return
              
         input_file = self.get_file()
         if input_file in ['', ' ', '.', '..']:
             return
         if len(self.keys) == 0:
-            warn = WarningWindow("You must add at least one key first!")
-            warn.display()
+            d = DConfirmation(['You must add at least one key first!'], title='Error')
+            d.result()
+            
             return
             
         self.logger.log('Encrypting '+input_file)
@@ -196,16 +182,18 @@ class MainWindow(object):
     
     def decrypt_file_dlg(self):
         if self.keys == None or len(self.keys) == 0 or self.selected_key == -1:
-            w = WarningWindow('Please select the key first')
-            w.display()
+            d = DConfirmation(['Please select the key first'], title='Error')
+            d.result()
+            
             return
         
         input_file = self.get_file()
         if input_file in ['', ' ', '.', '..']:
             return
         if len(self.keys) == 0:
-            warn = WarningWindow("You must add at least one key first!")
-            warn.display()
+            d = DConfirmation(['You must add at least one key first!'], title='Error')
+            d.result()
+            
             return
             
         self.logger.log('Decrypting '+input_file)
@@ -225,7 +213,7 @@ class MainWindow(object):
         return fb.result
     
     def add_key(self):
-        key = StringInput("Enter the key as a single line and press ENTER:").get_line()
+        key = DTextEntry(25, "", title="Enter the key as a single line and press ENTER").result()
         
         self.keys.append(key)
         self.selected_key = len(self.keys) - 1
@@ -237,9 +225,9 @@ class MainWindow(object):
     
     def set_key(self, i):
         self.selected_key = i
-        warn = WarningWindow("Key selected")
-        warn.display()
-        
+        d = DConfirmation(['Key selected!'], title='Error')
+        d.result()
+
     def list_keys(self):
         key_list = [(key, partial(self.set_key, i)) for i, key in enumerate(self.keys)]
         m = Menu(key_list, self.screen)
@@ -248,8 +236,8 @@ class MainWindow(object):
     def _del_key(self, key):
         if key in self.keys:
             self.keys.remove(key)
-            warn = WarningWindow("Key removed!")
-            warn.display()
+            d = DConfirmation(['Key removed!'], title='Error')
+            d.result()
             
     def delete_key(self):
         m = key_list = [(key, partial(self._del_key, key)) for key in self.keys]
