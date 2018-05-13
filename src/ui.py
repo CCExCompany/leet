@@ -144,7 +144,7 @@ class BackButton(npyscreen.ButtonPress):
 # --- Forms ---
 class MainForm(npyscreen.Form):
     def create(self):
-        self.add(npyscreen.TitleFixedText, name = "NOTE" , value="You must select a key prior to encryption/decryption")
+        self.add(npyscreen.TitleFixedText, name = "NOTE" , value="You must create at least one key prior to encryption/decryption")
         self.add(EncryptButton,   name = "Encrypt file")
         self.add(DecryptButton,   name = "Decrypt file")
         self.add(KeyManageButton, name = "Manage keys")
