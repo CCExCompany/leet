@@ -22,15 +22,16 @@ from ui import *
 # and also manages the actual forms of the application
 class LeetApp(npyscreen.NPSAppManaged):
     def onStart(self):
-        self.registerForm("MAIN", MainForm())
-        self.registerForm("ENCRYPTFILE", EncryptForm())
-        self.registerForm("DECRYPTFILE", DecryptForm())
-        self.registerForm("KEYMANAGE", RecordListDisplay())
-        self.registerForm("EDITKEY", KeyManageForm())
-        self.registerForm("PASSWORDINPUT", PasswordInputForm())
-        
         self.key_password = None
         self.database = KeyDatabase(filename=".keys.json")
+        
+        self.addForm("MAIN", MainForm)
+        self.addForm("ENCRYPTFILE", EncryptForm)
+        self.addForm("DECRYPTFILE", DecryptForm)
+        self.addForm("KEYMANAGE", RecordListDisplay)
+        self.addForm("EDITKEY", EditRecord)
+        self.addForm("PASSWORDINPUT", PasswordInputForm)
+        
         #self.setNextFormPrevious()
 
 

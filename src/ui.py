@@ -5,8 +5,7 @@
 import npyscreen
 import os
 import json
-from crypto import AESCipher
-from crypto import file_as_str, save_to_file
+from crypto import AESCipher, file_as_str, save_to_file
 
 
 class KeyDatabase(object):
@@ -31,7 +30,7 @@ class KeyDatabase(object):
         if c.decrypt(check) != 'CHECK':
             self.password = None
             return False # wrong password
-        keys = [c.decrypt(key) for key in encrypted_keys]
+        self.keys = [c.decrypt(key) for key in encrypted_keys]
         return True
     
     def save_keys(self):
@@ -40,16 +39,19 @@ class KeyDatabase(object):
         with open('.keys.json', 'w') as f: # save key
             f.write(json.dumps(encrypted_keys))
     
+    def add_record(self, key):
+        assert len(key) > 0
+        self.keys.append(key)
+        self.save_keys()
+        
     def update_record(self, record_id, key):
         assert len(key) > 0
         self.keys[record_id] = key
-        r = self.save_keys()
-        assert r
-
+        self.save_keys()
+        
     def delete_record(self, record_id):
         self.keys.pop(record_id)  
-        r = self.save_keys()
-        assert r
+        self.save_keys()
         
     def list_all_records(self):
         return self.keys
@@ -65,12 +67,44 @@ class ExitButton(npyscreen.ButtonPress):
         self.parent.parentApp.switchFormNow()
 
 
+class EncryptFileButton(npyscreen.ButtonPress):
+    def whenPressed(self):
+        filename = self.parent.file_sel.value
+        key = self.parent.key_sel.values[self.parent.key_sel.value]
+        if key is None or filename is None:
+            npyscreen.notify_confirm("Key and/or file selected is invalid!")
+            return
+
+        cs = AESCipher(key)
+        M = file_as_str(filename)
+        C = cs.encrypt(M)
+        ofname = filename + '.encrypted.asc'
+        save_to_file(ofname, C)
+        npyscreen.notify_confirm("Encrypted into: " + ofname)
+
+
 class EncryptButton(npyscreen.ButtonPress):
     def whenPressed(self):
         if self.parent.parentApp.key_password is None:
             self.parent.parentApp.switchForm("PASSWORDINPUT")
         else:
             self.parent.parentApp.switchForm("ENCRYPTFILE")
+
+
+class DecryptFileButton(npyscreen.ButtonPress):
+    def whenPressed(self):
+        filename = self.parent.file_sel.value
+        key = self.parent.key_sel.values[self.parent.key_sel.value]
+        if key is None or filename is None:
+            npyscreen.notify_confirm("Key and/or file selected is invalid!")
+            return
+
+        cs = AESCipher(key)
+        C = file_as_str(filename)
+        M = cs.decrypt(C)
+        ofname = filename + '.decrypted.asc'
+        save_to_file(ofname, M)
+        npyscreen.notify_confirm("Decrypted into: " + ofname)
 
 
 class DecryptButton(npyscreen.ButtonPress):
@@ -100,11 +134,12 @@ class PaswordInputButton(npyscreen.ButtonPress):
             self.parent.parentApp.key_password = None
             
         self.parent.parentApp.switchFormPrevious()
+     
         
 class BackButton(npyscreen.ButtonPress):
     def whenPressed(self):
         self.parent.parentApp.switchFormPrevious()
-
+        
 
 # --- Forms ---
 class MainForm(npyscreen.Form):
@@ -116,6 +151,7 @@ class MainForm(npyscreen.Form):
         self.add(ExitButton, name = "Exit", relx = 5, rely = 7)
         self.name = "Leet main menu"
 
+
 class PasswordInputForm(npyscreen.Form):
     def create(self):
         self.password_input = self.add(npyscreen.TitleText, name = "Keystore password:", value="")
@@ -124,22 +160,30 @@ class PasswordInputForm(npyscreen.Form):
         
 class EncryptForm(npyscreen.Form):
     def create(self):
-        self.add(npyscreen.TitleFixedText, name = "ENC FORM" , value="You must select a key prior to encryption/decryption")
-        self.add(BackButton, name = "Back", relx = 10, rely = 6)
-  
+        keys = self.parentApp.database.list_all_records()
+        self.file_sel = self.add(npyscreen.TitleFilenameCombo, name = "File:")
+        self.key_sel = self.add(npyscreen.TitleCombo, values = keys, name = "Key to use:")
+        self.add(EncryptFileButton, name = "Encrypt", rely = 6)
+        self.add(BackButton, name = "Back", relx = 10, rely = 9)
     
+    def adjust_widgets(self, *args):
+        keys = self.parentApp.database.list_all_records()
+        self.key_sel.values = keys
+        self.key_sel.update()
+        
+        
 class DecryptForm(npyscreen.Form):
     def create(self):
-        self.add(npyscreen.TitleFixedText, name = "DEC FORM" , value="You must select a key prior to encryption/decryption")
-        self.add(BackButton, name = "Back", relx = 10, rely = 6)
-   
+        keys = self.parentApp.database.list_all_records()
+        self.file_sel = self.add(npyscreen.TitleFilenameCombo, name = "File:")
+        self.key_sel = self.add(npyscreen.TitleCombo, values = keys, name = "Key to use:")
+        self.add(EncryptFileButton, name = "Decrypt", rely = 6)
+        self.add(BackButton, name = "Back", relx = 10, rely = 9)
     
-class KeyManageForm(npyscreen.Form):
-    def create(self):
-        self.add(npyscreen.TitleFixedText, name = "OK", value = "")
-    
-    def do_smth(self):
-        self.password = self.parentApp.key_password
+    def adjust_widgets(self, *args):
+        keys = self.parentApp.database.list_all_records()
+        self.key_sel.values = keys
+        self.key_sel.update()
 
 
 class RecordList(npyscreen.MultiLineAction):
@@ -147,14 +191,15 @@ class RecordList(npyscreen.MultiLineAction):
         super(RecordList, self).__init__(*args, **keywords)
         self.add_handlers({
             "^A": self.when_add_record,
-            "^D": self.when_delete_record
+            "^D": self.when_delete_record,
+            "^B": self.when_back
         })
 
     def display_value(self, vl):
-        return "%s, %s" % (vl[1], vl[2])
+        return "%s" % vl
     
     def actionHighlighted(self, act_on_this, keypress):
-        self.parent.parentApp.getForm('EDITKEY').value =act_on_this[0]
+        self.parent.parentApp.getForm('EDITKEY').value = act_on_this[0]
         self.parent.parentApp.switchForm('EDITKEY')
 
     def when_add_record(self, *args, **keywords):
@@ -164,6 +209,9 @@ class RecordList(npyscreen.MultiLineAction):
     def when_delete_record(self, *args, **keywords):
         self.parent.parentApp.database.delete_record(self.values[self.cursor_line][0])
         self.parent.update_list()
+    
+    def when_back(self, *args, **keywords):
+        self.parent.parentApp.switchFormPrevious()
 
 
 class RecordListDisplay(npyscreen.FormMutt):
@@ -179,23 +227,13 @@ class RecordListDisplay(npyscreen.FormMutt):
 class EditRecord(npyscreen.ActionForm):
     def create(self):
         self.value = None
-        self.key   = self.add(npyscreen.TitleText, name = "Last Name:",)
+        self.key   = self.add(npyscreen.TitleText, name = "Key value:",)
         
-    def beforeEditing(self):
-        if self.value:
-            record = self.parentApp.database.get_record(self.value)
-            self.name = "Record id : %s" % record[0]
-            self.key_id          = record[0]
-            self.key.value       = record[1]
-        else:
-            self.name = "New Record"
-            self.key_id          = ''
-            self.key.value       = ''
-    
     def on_ok(self):
-        if self.record_id: # We are editing an existing record
-            self.parentApp.database.update_record(self.key_id, key=self.key.value)
-        else: # We are adding a new record.
+        try: # We are editing an existing record
+            key_id = self.parentApp.database.keys.index(self.key.value)
+            self.parentApp.database.update_record(key_id, key=self.key.value)
+        except ValueError: # We are adding a new record.
             self.parentApp.database.add_record(key=self.key.value)
         self.parentApp.switchFormPrevious()
     
