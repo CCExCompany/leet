@@ -14,23 +14,27 @@ else:
 
 sys.path.append(os.path.join(dir_, "src"))
 
-import curses
-import logging
-from ui import MainWindow
+import npyscreen
+from ui import *
 
-class LeetLogger:
-    def __init__(self):
-        self.logger = logging.getLogger('leet')
-        self.logger.setLevel(logging.DEBUG)
-        fh = logging.FileHandler('.leet.log')
-        fh.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        self.logger.addHandler(fh)
-    
-    def log(self, msg):
-        self.logger.info(msg)
+
+# This application class serves as a wrapper for the initialization of curses
+# and also manages the actual forms of the application
+class LeetApp(npyscreen.NPSAppManaged):
+    def onStart(self):
+        self.key_password = None
+        self.database = KeyDatabase(filename=".keys.json")
+        
+        self.addForm("MAIN", MainForm)
+        self.addForm("ENCRYPTFILE", EncryptForm)
+        self.addForm("DECRYPTFILE", DecryptForm)
+        self.addForm("KEYMANAGE", RecordListDisplay)
+        self.addForm("EDITKEY", EditRecord)
+        self.addForm("PASSWORDINPUT", PasswordInputForm)
+        
+        #self.setNextFormPrevious()
+
 
 if __name__ == '__main__':
-    logger = LeetLogger()
-    curses.wrapper(MainWindow, logger)
+    LA = LeetApp()
+    LA.run()
