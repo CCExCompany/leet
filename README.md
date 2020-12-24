@@ -8,3 +8,5 @@ Here: https://sourceforge.net/p/home-of-leet/wiki/browse_pages/
 
 ## Build instructions
 Use: python setup.py build
+
+PS: To successfully compile your own copy of leet you need to install "python3-pip" then with pip you need to install "cx_freeze" via "sudo pip3 install cx_freeze" command (considering you are using a ubuntu/debian based distro). You might also need to run the following command "sudo apt install zlib1g-dev" to install "lz", and "sudo apt install python3-numpy" then you can finally run "python3 setup.py build" in the extracted directory to build the "driver" which you will then execute.
